@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Trigonometry & Unit Circle Explorer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-void: #06080f;
+      --bg-panel: #0b0f19;
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff2a85;
+      --neon-lime: #dfff00;
+      --neon-purple: #b84dff;
+      --neon-amber: #ffae00;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--bg-void);
+      color: #e2e8f0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #06080f;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    .neon-text-lime {
+      color: var(--neon-lime);
+      text-shadow: 0 0 10px rgba(223, 255, 0, 0.4);
+    }
+
+    .neon-text-lime {
+      color: var(--neon-lime);
+      text-shadow: 0 0 10px rgba(223, 255, 0, 0.4);
+    }
+    .neon-text-cyan {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+    }
+    .neon-text-magenta {
+      color: var(--neon-magenta);
+      text-shadow: 0 0 10px rgba(255, 42, 133, 0.4);
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 0.95; }
+      50% { transform: scale(1.25); opacity: 1; }
+    }
+
+    .cycle-indicator {
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col bg-[#06080f] select-none">
+
+  <!-- FULL-WIDTH TOP HEADER & CONTROLS -->
+  <header class="w-full flex flex-wrap items-center justify-between gap-3 px-3 sm:px-4 py-2.5 bg-[#0b0f19] border-b border-slate-800/80 shrink-0">
+    <div>
+      <div class="flex items-center gap-2">
+        <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-[#dfff00] shadow-[0_0_10px_#dfff00] cycle-indicator"></span>
+        <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">
+          Trigonometry <span class="neon-text-lime">Unit Circle</span> &amp; <span class="neon-text-cyan">Wave</span> Lab
+        </h1>
+      </div>
+      <p id="statusText" class="text-xs text-slate-400 mt-0.5">
+        Smooth 4.0s cycle active &bull; Click, drag, or use &larr;/&rarr; &amp; Space to control
+      </p>
+    </div>
+
+    <!-- Controls Group: Rotation Period Input + Geometric Lines Toggle + Radians/Degrees Toggle -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <label
+        for="periodInput"
+        title="Full rotation period in decimal seconds"
+        class="bg-[#06080f] border border-slate-800 px-2 py-1 text-xs flex items-center gap-1.5 text-slate-400 focus-within:border-[#dfff00]/60 transition-colors"
+      >
+        <span>Cycle</span>
+        <input
+          id="periodInput"
+          type="number"
+          min="0.1"
+          max="300"
+          step="0.1"
+          value="4.0"
+          aria-label="Rotation period in seconds"
+          class="w-12 bg-transparent font-mono-tech text-right text-[#dfff00] font-semibold focus:outline-none"
+        />
+        <span class="font-mono-tech text-[11px] text-slate-500">s</span>
+      </label>
+
+      <button
+        id="toggleExtensionsBtn"
+        type="button"
+        title="Toggle tangent/secant (amber) and cotangent/cosecant (purple) geometric lines"
+        class="px-2.5 py-1 text-xs font-medium border border-purple-500/40 bg-purple-950/30 text-purple-200 hover:bg-purple-900/40 transition flex items-center gap-1.5"
+      >
+        <span id="extDot" class="w-2 h-2 rounded-full bg-[#b84dff] shadow-[0_0_6px_#b84dff]"></span>
+        <span>Geo Lines</span>
+      </button>
+
+      <div class="bg-[#06080f] border border-slate-800 flex items-center divide-x divide-slate-800" role="group" aria-label="Angle Unit Toggle">
+        <button
+          id="btnRad"
+          type="button"
+          class="px-3 py-1 text-xs font-semibold transition-all bg-[#dfff00]/15 text-[#dfff00]"
+        >
+          Radians
+        </button>
+        <button
+          id="btnDeg"
+          type="button"
+          class="px-3 py-1 text-xs font-semibold transition-all text-slate-400 hover:text-slate-200"
+        >
+          Degrees
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN 50/50 SPLIT CONTENT AREA -->
+  <main class="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+
+    <!-- LEFT 50%: Live Readouts, Extended Trig Table & Notable Angles -->
+    <section class="w-full lg:w-1/2 lg:h-full flex flex-col bg-[#0b0f19] border-b lg:border-b-0 lg:border-r border-slate-800/80 overflow-hidden">
+
+      <!-- Live Angle & Primary Ratio Banner -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 border-b border-slate-800/80 divide-x divide-y sm:divide-y-0 divide-slate-800/80 shrink-0">
+        <div class="bg-[#080b14] p-2.5 px-3">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Angle &theta;</div>
+          <div id="readoutAnglePrimary" class="font-mono-tech text-sm sm:text-base font-bold neon-text-lime mt-0.5">0.7854 rad</div>
+          <div id="readoutAngleSecondary" class="font-mono-tech text-[11px] text-slate-400">45.0° (0.250π)</div>
+        </div>
+
+        <div class="bg-[#080b14] p-2.5 px-3">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Exact Ratio &theta;</div>
+          <div id="readoutExactAngle" class="font-mono-tech text-sm sm:text-base font-bold text-white mt-0.5">π/4</div>
+          <div id="readoutQuadrant" class="text-[11px] text-slate-400">Quadrant I (+, +)</div>
+        </div>
+
+        <div class="bg-[#080b14] p-2.5 px-3">
+          <div class="text-[10px] uppercase tracking-wider text-cyan-300/80 font-semibold">cos(&theta;) &bull; X</div>
+          <div id="readoutCos" class="font-mono-tech text-sm sm:text-base font-bold neon-text-cyan mt-0.5">0.7071</div>
+          <div id="readoutCosExact" class="font-mono-tech text-[11px] text-cyan-200/70">Exact: √2/2</div>
+        </div>
+
+        <div class="bg-[#080b14] p-2.5 px-3">
+          <div class="text-[10px] uppercase tracking-wider text-pink-300/80 font-semibold">sin(&theta;) &bull; Y</div>
+          <div id="readoutSin" class="font-mono-tech text-sm sm:text-base font-bold neon-text-magenta mt-0.5">0.7071</div>
+          <div id="readoutSinExact" class="font-mono-tech text-[11px] text-pink-200/70">Exact: √2/2</div>
+        </div>
+      </div>
+
+      <!-- Scrollable Content Area: Extended Trig Table + Clickable Standard Angles -->
+      <div class="flex-1 overflow-y-auto flex flex-col divide-y divide-slate-800/80">
+        
+        <!-- Extended Trigonometric Functions Table -->
+        <div class="bg-[#080b14]">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800/80 text-xs uppercase tracking-wider text-slate-400 bg-[#0a0e19]">
+                  <th class="py-2.5 px-3">Function</th>
+                  <th class="py-2.5 px-2.5">Identity</th>
+                  <th class="py-2.5 px-2.5 text-right">Exact Value</th>
+                  <th class="py-2.5 px-3 text-right">Live Decimal</th>
+                </tr>
+              </thead>
+              <tbody id="extendedTrigBody" class="divide-y divide-slate-800/50 text-sm font-mono-tech">
+                <!-- Populated once at startup -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Notable Angles Reference Table -->
+        <div class="bg-[#080b14]">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800/80 text-xs uppercase tracking-wider text-slate-400 bg-[#0a0e19]">
+                  <th id="thAngleUnit" class="py-2.5 px-3">θ (Rad)</th>
+                  <th class="py-2.5 px-2.5 text-cyan-300">cos(θ)</th>
+                  <th class="py-2.5 px-2.5 text-pink-400">sin(θ)</th>
+                  <th class="py-2.5 px-2.5 text-amber-300">tan(θ)</th>
+                  <th class="py-2.5 px-3 text-right">Feature</th>
+                </tr>
+              </thead>
+              <tbody id="notableAnglesBody" class="divide-y divide-slate-800/50 text-sm font-mono-tech">
+                <!-- Populated once at startup -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- RIGHT 50%: Vertically Stacked Equal-Height Canvases -->
+    <section class="w-full lg:w-1/2 lg:h-full flex flex-col divide-y divide-slate-800/80 bg-[#06080f]">
+      
+      <!-- TOP CANVAS: Unit Circle & Luminous Ray -->
+      <div class="flex-1 min-h-[320px] lg:min-h-0 flex flex-col relative">
+        <div class="absolute top-3 right-3 z-10 pointer-events-none hidden sm:flex items-center gap-3 text-[11px] font-mono-tech bg-[#06080f]/85 px-2.5 py-1 border border-slate-800">
+          <span class="text-[#00f3ff]">■ cos(&theta;)</span>
+          <span class="text-[#ff2a85]">■ sin(&theta;)</span>
+          <span class="text-[#dfff00]">■ r = 1</span>
+        </div>
+        <div id="unitCircleWrapper" class="canvas-container">
+          <canvas id="unitCircleCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- BOTTOM CANVAS: Interweaving Sinusoidal Chart -->
+      <div class="flex-1 min-h-[280px] lg:min-h-0 flex flex-col relative">
+        <div id="waveChartWrapper" class="canvas-container">
+          <canvas id="waveChartCanvas"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    /**
+     * Ultra-Smooth 60–120fps Interactive Neon Trigonometry Dashboard
+     * Performance & Engineering Architecture:
+     * 1. Zero per-frame ctx.shadowBlur or radial gradient allocations.
+     * 2. Static Offscreen Canvas layers for both Unit Circle and Wave Chart grids & curves.
+     * 3. Pre-rendered glow sprite textures composited with additive 'lighter' blending.
+     * 4. Zero-GC ring-buffer particle pool for luminous sparks gently falling off the ray.
+     * 5. Pointer events with setPointerCapture() for locked, smooth scrubbing across either chart.
+     * 6. String-diffed DOM updates so table cells only update when text actually changes.
+     */
+    (function () {
+      'use strict';
+
+      const TWO_PI = Math.PI * 2;
+      const DEFAULT_PERIOD_SEC = 4.0;
+      const EPSILON = 1e-7;
+      const BG_COLOR = '#06080f';
+
+      // ==========================================
+      // 1. STATE & CONSTANTS
+      // ==========================================
+      const state = {
+        theta: Math.PI / 4,          // Start at the pi/4 intersection
+        unitMode: 'rad',             // 'rad' | 'deg'
+        rotationPeriodSec: DEFAULT_PERIOD_SEC,
+        isPaused: false,
+        isPointerInsideUnit: false,
+        isPointerInsideWave: false,
+        isDraggingUnit: false,
+        isDraggingWave: false,
+        showGeoLines: true,
+        lastTimestamp: 0,
+        spawnAccumulator: 0,
+        waveSpawnAccumulator: 0,
+        activeNotableIndex: -1
+      };
+
+      // Notable angles reference table (including Khan Academy intersection points)
+      const NOTABLE_ANGLES = [
+        { rad: 0,                  deg: 0,   radLabel: '0',     cos: '1',     sin: '0',     tan: '0',   note: 'Origin (1, 0)',          intersect: false },
+        { rad: Math.PI / 6,        deg: 30,  radLabel: 'π/6',   cos: '√3/2',  sin: '1/2',   tan: '√3/3',note: '30° Reference',          intersect: false },
+        { rad: Math.PI / 4,        deg: 45,  radLabel: 'π/4',   cos: '√2/2',  sin: '√2/2',  tan: '1',   note: '★ Intersection #1',      intersect: true  },
+        { rad: Math.PI / 3,        deg: 60,  radLabel: 'π/3',   cos: '1/2',   sin: '√3/2',  tan: '√3',  note: '60° Reference',          intersect: false },
+        { rad: Math.PI / 2,        deg: 90,  radLabel: 'π/2',   cos: '0',     sin: '1',     tan: 'undef',note: 'North Pole (0, 1)',     intersect: false },
+        { rad: (2 * Math.PI) / 3,  deg: 120, radLabel: '2π/3',  cos: '-1/2',  sin: '√3/2',  tan: '-√3', note: 'Quadrant II',            intersect: false },
+        { rad: (3 * Math.PI) / 4,  deg: 135, radLabel: '3π/4',  cos: '-√2/2', sin: '√2/2',  tan: '-1',  note: 'Opposite signs',         intersect: false },
+        { rad: (5 * Math.PI) / 6,  deg: 150, radLabel: '5π/6',  cos: '-√3/2', sin: '1/2',   tan: '-√3/3',note: 'Quadrant II',           intersect: false },
+        { rad: Math.PI,            deg: 180, radLabel: 'π',     cos: '-1',    sin: '0',     tan: '0',   note: 'West Pole (-1, 0)',      intersect: false },
+        { rad: (7 * Math.PI) / 6,  deg: 210, radLabel: '7π/6',  cos: '-√3/2', sin: '-1/2',  tan: '√3/3',note: 'Quadrant III',           intersect: false },
+        { rad: (5 * Math.PI) / 4,  deg: 225, radLabel: '5π/4',  cos: '-√2/2', sin: '-√2/2', tan: '1',   note: '★ Intersection #2',      intersect: true  },
+        { rad: (4 * Math.PI) / 3,  deg: 240, radLabel: '4π/3',  cos: '-1/2',  sin: '-√3/2', tan: '√3',  note: 'Quadrant III',           intersect: false },
+        { rad: (3 * Math.PI) / 2,  deg: 270, radLabel: '3π/2',  cos: '0',     sin: '-1',    tan: 'undef',note: 'South Pole (0, -1)',    intersect: false },
+        { rad: (5 * Math.PI) / 3,  deg: 300, radLabel: '5π/3',  cos: '1/2',   sin: '-√3/2', tan: '-√3', note: 'Quadrant IV',            intersect: false },
+        { rad: (7 * Math.PI) / 4,  deg: 315, radLabel: '7π/4',  cos: '√2/2',  sin: '-√2/2', tan: '-1',  note: 'Opposite signs',         intersect: false },
+        { rad: (11 * Math.PI) / 6, deg: 330, radLabel: '11π/6', cos: '√3/2',  sin: '-1/2',  tan: '-√3/3',note: 'Quadrant IV',           intersect: false },
+        { rad: TWO_PI,             deg: 360, radLabel: '2π',    cos: '1',     sin: '0',     tan: '0',   note: 'Full Cycle (1, 0)',      intersect: false }
+      ];
+
+      // Exact symbolic lookup for multiples of 15 degrees (pi/12)
+      const EXACT_BY_DEG = {
+        0:   { angle: '0',     sin: '0',      cos: '1',      tan: '0',     csc: 'undef',  sec: '1',      cot: 'undef' },
+        30:  { angle: 'π/6',   sin: '1/2',    cos: '√3/2',   tan: '√3/3',  csc: '2',      sec: '2√3/3',  cot: '√3' },
+        45:  { angle: 'π/4',   sin: '√2/2',   cos: '√2/2',   tan: '1',     csc: '√2',     sec: '√2',     cot: '1' },
+        60:  { angle: 'π/3',   sin: '√3/2',   cos: '1/2',    tan: '√3',    csc: '2√3/3',  sec: '2',      cot: '√3/3' },
+        90:  { angle: 'π/2',   sin: '1',      cos: '0',      tan: 'undef', csc: '1',      sec: 'undef',  cot: '0' },
+        120: { angle: '2π/3',  sin: '√3/2',   cos: '-1/2',   tan: '-√3',   csc: '2√3/3',  sec: '-2',     cot: '-√3/3' },
+        135: { angle: '3π/4',  sin: '√2/2',   cos: '-√2/2',  tan: '-1',    csc: '√2',     sec: '-√2',    cot: '-1' },
+        150: { angle: '5π/6',  sin: '1/2',    cos: '-√3/2',  tan: '-√3/3', csc: '2',      sec: '-2√3/3', cot: '-√3' },
+        180: { angle: 'π',     sin: '0',      cos: '-1',     tan: '0',     csc: 'undef',  sec: '-1',     cot: 'undef' },
+        210: { angle: '7π/6',  sin: '-1/2',   cos: '-√3/2',  tan: '√3/3',  csc: '-2',     sec: '-2√3/3', cot: '√3' },
+        225: { angle: '5π/4',  sin: '-√2/2',  cos: '-√2/2',  tan: '1',     csc: '-√2',    sec: '-√2',    cot: '1' },
+        240: { angle: '4π/3',  sin: '-√3/2',  cos: '-1/2',   tan: '√3',    csc: '-2√3/3', sec: '-2',     cot: '√3/3' },
+        270: { angle: '3π/2',  sin: '-1',     cos: '0',      tan: 'undef', csc: '-1',     sec: 'undef',  cot: '0' },
+        300: { angle: '5π/3',  sin: '-√3/2',  cos: '1/2',    tan: '-√3',   csc: '-2√3/3', sec: '2',      cot: '-√3/3' },
+        315: { angle: '7π/4',  sin: '-√2/2',  cos: '√2/2',   tan: '-1',    csc: '-√2',    sec: '√2',     cot: '-1' },
+        330: { angle: '11π/6', sin: '-1/2',   cos: '√3/2',   tan: '-√3/3', csc: '-2',     sec: '2√3/3',  cot: '-√3' },
+        360: { angle: '2π',    sin: '0',      cos: '1',      tan: '0',     csc: 'undef',  sec: '1',      cot: 'undef' }
+      };
+
+      // ==========================================
+      // 2. DOM REFERENCES
+      // ==========================================
+      const unitWrapper = document.getElementById('unitCircleWrapper');
+      const waveWrapper = document.getElementById('waveChartWrapper');
+      const unitCanvas = document.getElementById('unitCircleCanvas');
+      const waveCanvas = document.getElementById('waveChartCanvas');
+      const unitCtx = unitCanvas.getContext('2d', { alpha: false });
+      const waveCtx = waveCanvas.getContext('2d', { alpha: false });
+
+      const btnRad = document.getElementById('btnRad');
+      const btnDeg = document.getElementById('btnDeg');
+      const periodInput = document.getElementById('periodInput');
+      const toggleExtensionsBtn = document.getElementById('toggleExtensionsBtn');
+      const extDot = document.getElementById('extDot');
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+
+      const readoutAnglePrimary = document.getElementById('readoutAnglePrimary');
+      const readoutAngleSecondary = document.getElementById('readoutAngleSecondary');
+      const readoutExactAngle = document.getElementById('readoutExactAngle');
+      const readoutQuadrant = document.getElementById('readoutQuadrant');
+      const readoutCos = document.getElementById('readoutCos');
+      const readoutCosExact = document.getElementById('readoutCosExact');
+      const readoutSin = document.getElementById('readoutSin');
+      const readoutSinExact = document.getElementById('readoutSinExact');
+
+      const extendedTrigBody = document.getElementById('extendedTrigBody');
+      const notableAnglesBody = document.getElementById('notableAnglesBody');
+      const thAngleUnit = document.getElementById('thAngleUnit');
+
+      // ==========================================
+      // 3. PRE-RENDERED GLOW SPRITES (ZERO SHADOWBLUR)
+      // ==========================================
+      function createGlowSprite(size, innerColor, midColor, outerColor) {
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const gctx = c.getContext('2d');
+        const half = size * 0.5;
+        const grad = gctx.createRadialGradient(half, half, 0, half, half, half);
+        grad.addColorStop(0.0, innerColor);
+        grad.addColorStop(0.28, midColor);
+        grad.addColorStop(0.65, outerColor);
+        grad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+        gctx.fillStyle = grad;
+        gctx.fillRect(0, 0, size, size);
+        return c;
+      }
+
+      const SPRITES = {
+        lime: createGlowSprite(64, 'rgba(255,255,255,1)', 'rgba(223,255,0,0.85)', 'rgba(223,255,0,0.18)'),
+        cyan: createGlowSprite(48, 'rgba(255,255,255,1)', 'rgba(0,243,255,0.85)', 'rgba(0,243,255,0.15)'),
+        magenta: createGlowSprite(48, 'rgba(255,255,255,1)', 'rgba(255,42,133,0.85)', 'rgba(255,42,133,0.15)'),
+        sparkLime: createGlowSprite(24, 'rgba(255,255,240,1)', 'rgba(223,255,0,0.8)', 'rgba(223,255,0,0.1)'),
+        sparkWhite: createGlowSprite(24, 'rgba(255,255,255,1)', 'rgba(210,255,180,0.8)', 'rgba(223,255,0,0.1)')
+      };
+
+      // ==========================================
+      // 4. OFFSCREEN STATIC LAYER CACHES
+      // ==========================================
+      const unitStaticLayer = document.createElement('canvas');
+      const unitStaticCtx = unitStaticLayer.getContext('2d', { alpha: false });
+
+      const waveStaticLayer = document.createElement('canvas');
+      const waveStaticCtx = waveStaticLayer.getContext('2d', { alpha: false });
+
+      const unitMetrics = { w: 0, h: 0, dpr: 1, cx: 0, cy: 0, R: 100 };
+      const waveMetrics = { w: 0, h: 0, dpr: 1, padLeft: 44, padRight: 24, padTop: 24, padBottom: 28, plotW: 100, plotH: 100, midY: 50, ampY: 40 };
+
+      function rebuildUnitStaticLayer() {
+        const { w, h, dpr, cx, cy, R } = unitMetrics;
+        if (w <= 0 || h <= 0) return;
+
+        unitStaticLayer.width = Math.round(w * dpr);
+        unitStaticLayer.height = Math.round(h * dpr);
+        const ctx = unitStaticCtx;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Background
+        ctx.fillStyle = BG_COLOR;
+        ctx.fillRect(0, 0, w, h);
+
+        // Subtle ambient center glow
+        const bgGrad = ctx.createRadialGradient(cx, cy, R * 0.05, cx, cy, R * 1.65);
+        bgGrad.addColorStop(0, 'rgba(223, 255, 0, 0.05)');
+        bgGrad.addColorStop(0.55, 'rgba(0, 243, 255, 0.025)');
+        bgGrad.addColorStop(1, 'rgba(6, 8, 15, 0)');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Cartesian grid lines
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.07)';
+        ctx.lineWidth = 1;
+        const step = R / 2;
+        ctx.beginPath();
+        for (let x = cx % step; x < w; x += step) {
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+        }
+        for (let y = cy % step; y < h; y += step) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+        }
+        ctx.stroke();
+
+        // Main X & Y Axes
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.25)';
+        ctx.lineWidth = 1.25;
+        ctx.beginPath();
+        ctx.moveTo(16, cy);
+        ctx.lineTo(w - 16, cy);
+        ctx.moveTo(cx, 38);
+        ctx.lineTo(cx, h - 16);
+        ctx.stroke();
+
+        // Base Unit Circle Ring (multi-stroke neon glow without shadowBlur)
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.10)';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, TWO_PI);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.34)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, TWO_PI);
+        ctx.stroke();
+
+        // Cardinal tick markers & coordinate labels
+        const cardinals = [
+          { a: 0, label: '(1, 0)', dx: 10, dy: 4, align: 'left' },
+          { a: Math.PI / 2, label: '(0, 1)', dx: 0, dy: -11, align: 'center' },
+          { a: Math.PI, label: '(-1, 0)', dx: -10, dy: 4, align: 'right' },
+          { a: (3 * Math.PI) / 2, label: '(0, -1)', dx: 0, dy: 16, align: 'center' }
+        ];
+        ctx.font = '600 11px "JetBrains Mono", monospace';
+        for (let i = 0; i < cardinals.length; i++) {
+          const pt = cardinals[i];
+          const px = cx + Math.cos(pt.a) * R;
+          const py = cy - Math.sin(pt.a) * R;
+          ctx.fillStyle = '#dfff00';
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, TWO_PI);
+          ctx.fill();
+
+          ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
+          ctx.textAlign = pt.align;
+          ctx.fillText(pt.label, px + pt.dx, py + pt.dy);
+        }
+
+        // Intersection angle markers at pi/4 and 5pi/4
+        const interAngles = [Math.PI / 4, (5 * Math.PI) / 4];
+        ctx.fillStyle = 'rgba(223, 255, 0, 0.75)';
+        for (let i = 0; i < interAngles.length; i++) {
+          const ia = interAngles[i];
+          const ix = cx + Math.cos(ia) * R;
+          const iy = cy - Math.sin(ia) * R;
+          ctx.beginPath();
+          ctx.arc(ix, iy, 3.2, 0, TWO_PI);
+          ctx.fill();
+        }
+      }
+
+      function rebuildWaveStaticLayer() {
+        const { w, h, dpr, padLeft, padRight, padTop, padBottom, plotW, plotH, midY, ampY } = waveMetrics;
+        if (w <= 0 || h <= 0) return;
+
+        waveStaticLayer.width = Math.round(w * dpr);
+        waveStaticLayer.height = Math.round(h * dpr);
+        const ctx = waveStaticCtx;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Background
+        ctx.fillStyle = BG_COLOR;
+        ctx.fillRect(0, 0, w, h);
+
+        // Horizontal Y grid lines (+1, +0.5, 0, -0.5, -1)
+        const yLevels = [1, 0.5, 0, -0.5, -1];
+        ctx.font = '500 10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        for (let i = 0; i < yLevels.length; i++) {
+          const val = yLevels[i];
+          const y = midY - val * ampY;
+          ctx.strokeStyle = val === 0 ? 'rgba(223, 255, 0, 0.28)' : 'rgba(148, 163, 184, 0.09)';
+          ctx.lineWidth = val === 0 ? 1.25 : 1;
+          ctx.beginPath();
+          ctx.moveTo(padLeft, y);
+          ctx.lineTo(padLeft + plotW, y);
+          ctx.stroke();
+
+          ctx.fillStyle = val === 0 ? '#dfff00' : 'rgba(148, 163, 184, 0.72)';
+          ctx.fillText(val === 0 ? '0' : val.toFixed(1), padLeft - 8, y + 3.5);
+        }
+
+        // Vertical X ticks (0, pi/4, pi/2, pi, 5pi/4, 3pi/2, 2pi)
+        const xTicks = [
+          { rad: 0,                  radStr: '0',     degStr: '0°',   highlight: false },
+          { rad: Math.PI / 4,        radStr: 'π/4',   degStr: '45°',  highlight: true  },
+          { rad: Math.PI / 2,        radStr: 'π/2',   degStr: '90°',  highlight: false },
+          { rad: Math.PI,            radStr: 'π',     degStr: '180°', highlight: false },
+          { rad: (5 * Math.PI) / 4,  radStr: '5π/4',  degStr: '225°', highlight: true  },
+          { rad: (3 * Math.PI) / 2,  radStr: '3π/2',  degStr: '270°', highlight: false },
+          { rad: TWO_PI,             radStr: '2π',    degStr: '360°', highlight: false }
+        ];
+
+        ctx.textAlign = 'center';
+        for (let i = 0; i < xTicks.length; i++) {
+          const t = xTicks[i];
+          const x = padLeft + (t.rad / TWO_PI) * plotW;
+          ctx.strokeStyle = t.highlight ? 'rgba(223, 255, 0, 0.24)' : 'rgba(148, 163, 184, 0.09)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, padTop);
+          ctx.lineTo(x, padTop + plotH);
+          ctx.stroke();
+
+          ctx.fillStyle = t.highlight ? '#dfff00' : 'rgba(148, 163, 184, 0.82)';
+          ctx.font = t.highlight ? '700 10px "JetBrains Mono", monospace' : '500 10px "JetBrains Mono", monospace';
+          const label = state.unitMode === 'rad' ? t.radStr : t.degStr;
+          ctx.fillText(label, x, padTop + plotH + 16);
+        }
+
+        // Draw y = cos(θ) curve (Neon Cyan)
+        const samples = Math.max(180, Math.round(plotW * 0.75));
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        // Outer glow stroke for cos
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.16)';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        for (let i = 0; i <= samples; i++) {
+          const ratio = i / samples;
+          const x = padLeft + ratio * plotW;
+          const y = midY - Math.cos(ratio * TWO_PI) * ampY;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Core stroke for cos
+        ctx.strokeStyle = '#00f3ff';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // Draw y = sin(θ) curve (Neon Magenta)
+        ctx.strokeStyle = 'rgba(255, 42, 133, 0.16)';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        for (let i = 0; i <= samples; i++) {
+          const ratio = i / samples;
+          const x = padLeft + ratio * plotW;
+          const y = midY - Math.sin(ratio * TWO_PI) * ampY;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ff2a85';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // Highlight the two intersection points (π/4 and 5π/4)
+        const intersections = [Math.PI / 4, (5 * Math.PI) / 4];
+        for (let i = 0; i < intersections.length; i++) {
+          const a = intersections[i];
+          const ix = padLeft + (a / TWO_PI) * plotW;
+          const iy = midY - Math.sin(a) * ampY;
+
+          ctx.strokeStyle = 'rgba(223, 255, 0, 0.45)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(ix, iy, 6.5, 0, TWO_PI);
+          ctx.stroke();
+
+          ctx.fillStyle = '#dfff00';
+          ctx.beginPath();
+          ctx.arc(ix, iy, 2.8, 0, TWO_PI);
+          ctx.fill();
+        }
+
+        // Inline curve labels near top right
+        ctx.font = '600 11px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#00f3ff';
+        ctx.fillText('y = cos(θ)', padLeft + plotW - 6, padTop + 14);
+        ctx.fillStyle = '#ff2a85';
+        ctx.fillText('y = sin(θ)', padLeft + plotW - 6, padTop + 29);
+      }
+
+      // ==========================================
+      // 5. ZERO-GC PARTICLE POOL (FALLING EMBERS)
+      // ==========================================
+      const POOL_SIZE = 240;
+      const particles = new Array(POOL_SIZE);
+      for (let i = 0; i < POOL_SIZE; i++) {
+        particles[i] = {
+          active: false,
+          x: 0,
+          y: 0,
+          vx: 0,
+          vy: 0,
+          life: 0,
+          maxLife: 1,
+          size: 4,
+          isWhite: false
+        };
+      }
+      let poolCursor = 0;
+
+      function spawnRayParticle(cosA, sinA) {
+        const { cx, cy, R } = unitMetrics;
+        const p = particles[poolCursor];
+        poolCursor = (poolCursor + 1) % POOL_SIZE;
+
+        // Spawn along the outer 85% of the rotating light ray
+        const dist = (0.15 + Math.random() * 0.85) * R;
+        p.active = true;
+        p.x = cx + cosA * dist + (Math.random() - 0.5) * 3;
+        p.y = cy - sinA * dist + (Math.random() - 0.5) * 3;
+        p.vx = (Math.random() - 0.5) * 14;
+        p.vy = 18 + Math.random() * 34; // Gently drifts downward
+        p.life = 0;
+        p.maxLife = 0.55 + Math.random() * 0.65;
+        p.size = 4 + Math.random() * 6;
+        p.isWhite = Math.random() > 0.68;
+      }
+
+      // Zero-GC particle pool for the vertical scrubber bar on the sinusoidal wave chart
+      const WAVE_POOL_SIZE = 180;
+      const waveParticles = new Array(WAVE_POOL_SIZE);
+      for (let i = 0; i < WAVE_POOL_SIZE; i++) {
+        waveParticles[i] = {
+          active: false,
+          x: 0,
+          y: 0,
+          vx: 0,
+          vy: 0,
+          life: 0,
+          maxLife: 1,
+          size: 4,
+          isWhite: false
+        };
+      }
+      let wavePoolCursor = 0;
+
+      function spawnWaveParticle(barX) {
+        const { padTop, plotH } = waveMetrics;
+        const p = waveParticles[wavePoolCursor];
+        wavePoolCursor = (wavePoolCursor + 1) % WAVE_POOL_SIZE;
+
+        p.active = true;
+        p.x = barX + (Math.random() - 0.5) * 3;
+        p.y = padTop + Math.random() * plotH;
+        p.vx = (Math.random() - 0.5) * 14;
+        p.vy = 18 + Math.random() * 34; // Gently drifts downward
+        p.life = 0;
+        p.maxLife = 0.55 + Math.random() * 0.65;
+        p.size = 4 + Math.random() * 6;
+        p.isWhite = Math.random() > 0.68;
+      }
+
+      function normalizeAngle(rad) {
+        const mod = rad % TWO_PI;
+        return mod < 0 ? mod + TWO_PI : mod;
+      }
+
+      function formatNum(val) {
+        if (!Number.isFinite(val) || Math.abs(val) > 9999) return 'undef';
+        if (Math.abs(val) < EPSILON) return '0.0000';
+        return val.toFixed(4);
+      }
+
+      function getExactSymbolic(thetaRad) {
+        const deg = (thetaRad * 180) / Math.PI;
+        const nearest15 = Math.round(deg / 15) * 15;
+        if (Math.abs(deg - nearest15) < 0.45) {
+          const normDeg = ((nearest15 % 360) + 360) % 360;
+          if (EXACT_BY_DEG[normDeg]) {
+            return EXACT_BY_DEG[normDeg];
+          }
+        }
+        return null;
+      }
+
+      function getQuadrantInfo(thetaRad) {
+        const deg = (thetaRad * 180) / Math.PI;
+        if (Math.abs(deg) < 0.5 || Math.abs(deg - 360) < 0.5) return 'Positive X-Axis (1, 0)';
+        if (Math.abs(deg - 90) < 0.5) return 'Positive Y-Axis (0, 1)';
+        if (Math.abs(deg - 180) < 0.5) return 'Negative X-Axis (-1, 0)';
+        if (Math.abs(deg - 270) < 0.5) return 'Negative Y-Axis (0, -1)';
+        if (deg > 0 && deg < 90) return 'Quadrant I (+, +)';
+        if (deg > 90 && deg < 180) return 'Quadrant II (-, +)';
+        if (deg > 180 && deg < 270) return 'Quadrant III (-, -)';
+        return 'Quadrant IV (+, -)';
+      }
+
+      // ==========================================
+      // 7. INITIALIZE & DIFF-UPDATE DOM TABLES
+      // ==========================================
+      const EXTENDED_FUNCTIONS = [
+        { key: 'sin',      name: 'sin(θ)',      identity: 'y / r',           colorClass: 'text-[#ff2a85]' },
+        { key: 'cos',      name: 'cos(θ)',      identity: 'x / r',           colorClass: 'text-[#00f3ff]' },
+        { key: 'tan',      name: 'tan(θ)',      identity: 'sin(θ) / cos(θ)', colorClass: 'text-amber-300' },
+        { key: 'csc',      name: 'csc(θ)',      identity: '1 / sin(θ)',      colorClass: 'text-purple-300' },
+        { key: 'sec',      name: 'sec(θ)',      identity: '1 / cos(θ)',      colorClass: 'text-amber-200' },
+        { key: 'cot',      name: 'cot(θ)',      identity: 'cos(θ) / sin(θ)', colorClass: 'text-purple-200' },
+        { key: 'versin',   name: 'versin(θ)',   identity: '1 − cos(θ)',      colorClass: 'text-slate-200' },
+        { key: 'coversin', name: 'coversin(θ)', identity: '1 − sin(θ)',      colorClass: 'text-slate-200' },
+        { key: 'haversin', name: 'haversin(θ)', identity: '(1 − cos(θ)) / 2',colorClass: 'text-slate-200' },
+        { key: 'exsec',    name: 'exsec(θ)',    identity: 'sec(θ) − 1',      colorClass: 'text-amber-200/80' },
+        { key: 'excsc',    name: 'excsc(θ)',    identity: 'csc(θ) − 1',      colorClass: 'text-purple-200/80' },
+        { key: 'crd',      name: 'crd(θ)',      identity: '2·sin(θ / 2)',    colorClass: 'text-[#dfff00]' }
+      ];
+
+      const extDomRefs = {};
+      const domCache = {};
+
+      function setTextCached(key, el, val) {
+        if (domCache[key] !== val) {
+          domCache[key] = val;
+          el.textContent = val;
+        }
+      }
+
+      function buildExtendedTableDOM() {
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < EXTENDED_FUNCTIONS.length; i++) {
+          const fn = EXTENDED_FUNCTIONS[i];
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-800/30 transition-colors';
+
+          const tdName = document.createElement('td');
+          tdName.className = `py-2 px-3 font-semibold ${fn.colorClass}`;
+          tdName.textContent = fn.name;
+
+          const tdId = document.createElement('td');
+          tdId.className = 'py-2 px-2.5 text-slate-400 text-xs';
+          tdId.textContent = fn.identity;
+
+          const tdExact = document.createElement('td');
+          tdExact.className = 'py-2 px-2.5 text-right text-slate-300';
+          tdExact.textContent = '—';
+
+          const tdVal = document.createElement('td');
+          tdVal.className = `py-2 px-3 text-right font-semibold ${fn.colorClass}`;
+          tdVal.textContent = '0.0000';
+
+          tr.appendChild(tdName);
+          tr.appendChild(tdId);
+          tr.appendChild(tdExact);
+          tr.appendChild(tdVal);
+          frag.appendChild(tr);
+
+          extDomRefs[fn.key] = { exactEl: tdExact, valEl: tdVal };
+        }
+        extendedTrigBody.innerHTML = '';
+        extendedTrigBody.appendChild(frag);
+      }
+
+      const notableRowEls = [];
+      const notableAngleCellEls = [];
+
+      function buildNotableAnglesDOM() {
+        const frag = document.createDocumentFragment();
+        notableRowEls.length = 0;
+        notableAngleCellEls.length = 0;
+
+        for (let i = 0; i < NOTABLE_ANGLES.length; i++) {
+          const item = NOTABLE_ANGLES[i];
+          const tr = document.createElement('tr');
+          tr.className = item.intersect
+            ? 'cursor-pointer bg-[#dfff00]/[0.06] hover:bg-[#dfff00]/[0.14] transition-colors'
+            : 'cursor-pointer hover:bg-slate-800/40 transition-colors';
+
+          const tdAngle = document.createElement('td');
+          tdAngle.className = item.intersect
+            ? 'py-2 px-3 font-bold text-[#dfff00]'
+            : 'py-2 px-3 font-medium text-slate-200';
+          tdAngle.textContent = state.unitMode === 'rad' ? item.radLabel : `${item.deg}°`;
+
+          const tdCos = document.createElement('td');
+          tdCos.className = 'py-2 px-2.5 text-cyan-300';
+          tdCos.textContent = item.cos;
+
+          const tdSin = document.createElement('td');
+          tdSin.className = 'py-2 px-2.5 text-pink-400';
+          tdSin.textContent = item.sin;
+
+          const tdTan = document.createElement('td');
+          tdTan.className = 'py-2 px-2.5 text-amber-300';
+          tdTan.textContent = item.tan;
+
+          const tdNote = document.createElement('td');
+          tdNote.className = item.intersect
+            ? 'py-2 px-3 text-right text-[#dfff00] font-semibold text-xs'
+            : 'py-2 px-3 text-right text-slate-400 text-xs';
+          tdNote.textContent = item.note;
+
+          tr.appendChild(tdAngle);
+          tr.appendChild(tdCos);
+          tr.appendChild(tdSin);
+          tr.appendChild(tdTan);
+          tr.appendChild(tdNote);
+
+          tr.addEventListener('click', () => {
+            state.theta = normalizeAngle(item.rad);
+            state.isPaused = true;
+            updatePauseStatusUI();
+          });
+
+          frag.appendChild(tr);
+          notableRowEls.push(tr);
+          notableAngleCellEls.push(tdAngle);
+        }
+
+        notableAnglesBody.innerHTML = '';
+        notableAnglesBody.appendChild(frag);
+      }
+
+      function updateNotableAnglesUnitLabels() {
+        thAngleUnit.textContent = state.unitMode === 'rad' ? 'θ (Rad)' : 'θ (Deg)';
+        for (let i = 0; i < NOTABLE_ANGLES.length; i++) {
+          const item = NOTABLE_ANGLES[i];
+          notableAngleCellEls[i].textContent = state.unitMode === 'rad' ? item.radLabel : `${item.deg}°`;
+        }
+      }
+
+      function updateReadoutsAndTables() {
+        const theta = state.theta;
+        const deg = (theta * 180) / Math.PI;
+        const piMultiple = theta / Math.PI;
+        const exact = getExactSymbolic(theta);
+
+        if (state.unitMode === 'rad') {
+          setTextCached('angPri', readoutAnglePrimary, `${theta.toFixed(4)} rad`);
+          setTextCached('angSec', readoutAngleSecondary, `${deg.toFixed(1)}° (${piMultiple.toFixed(3)}π)`);
+        } else {
+          setTextCached('angPri', readoutAnglePrimary, `${deg.toFixed(2)}°`);
+          setTextCached('angSec', readoutAngleSecondary, `${theta.toFixed(4)} rad (${piMultiple.toFixed(3)}π)`);
+        }
+
+        setTextCached('angExact', readoutExactAngle, exact ? exact.angle : `${piMultiple.toFixed(2)}π`);
+        setTextCached('quad', readoutQuadrant, getQuadrantInfo(theta));
+
+        const s = Math.sin(theta);
+        const c = Math.cos(theta);
+        const t = Math.abs(c) < EPSILON ? Infinity : s / c;
+        const csc = Math.abs(s) < EPSILON ? Infinity : 1 / s;
+        const sec = Math.abs(c) < EPSILON ? Infinity : 1 / c;
+        const cot = Math.abs(s) < EPSILON ? Infinity : c / s;
+        const versin = 1 - c;
+        const coversin = 1 - s;
+        const haversin = 0.5 * (1 - c);
+        const exsec = sec - 1;
+        const excsc = csc - 1;
+        const crd = 2 * Math.sin(theta * 0.5);
+
+        setTextCached('cosVal', readoutCos, formatNum(c));
+        setTextCached('cosEx', readoutCosExact, exact ? `Exact: ${exact.cos}` : 'Exact: —');
+        setTextCached('sinVal', readoutSin, formatNum(s));
+        setTextCached('sinEx', readoutSinExact, exact ? `Exact: ${exact.sin}` : 'Exact: —');
+
+        const values = { sin: s, cos: c, tan: t, csc, sec, cot, versin, coversin, haversin, exsec, excsc, crd };
+        const exactMap = exact ? {
+          sin: exact.sin,
+          cos: exact.cos,
+          tan: exact.tan,
+          csc: exact.csc,
+          sec: exact.sec,
+          cot: exact.cot
+        } : {};
+
+        for (let i = 0; i < EXTENDED_FUNCTIONS.length; i++) {
+          const key = EXTENDED_FUNCTIONS[i].key;
+          const refs = extDomRefs[key];
+          setTextCached(`ext_v_${key}`, refs.valEl, formatNum(values[key]));
+          setTextCached(`ext_e_${key}`, refs.exactEl, exactMap[key] || '—');
+        }
+
+        // Highlight closest notable angle row if within 1.5 degrees
+        let closestIdx = -1;
+        for (let i = 0; i < NOTABLE_ANGLES.length; i++) {
+          if (Math.abs(theta - NOTABLE_ANGLES[i].rad) < 0.026) {
+            closestIdx = i;
+            break;
+          }
+        }
+        if (closestIdx !== state.activeNotableIndex) {
+          if (state.activeNotableIndex >= 0 && notableRowEls[state.activeNotableIndex]) {
+            notableRowEls[state.activeNotableIndex].classList.remove('ring-1', 'ring-[#dfff00]/70', 'bg-[#dfff00]/15');
+          }
+          if (closestIdx >= 0 && notableRowEls[closestIdx]) {
+            notableRowEls[closestIdx].classList.add('ring-1', 'ring-[#dfff00]/70', 'bg-[#dfff00]/15');
+          }
+          state.activeNotableIndex = closestIdx;
+        }
+      }
+
+      // ==========================================
+      // 8. UI CONTROLS & PAUSE STATUS
+      // ==========================================
+      function updatePauseStatusUI() {
+        const periodFormatted = state.rotationPeriodSec.toFixed(1).replace(/\.0$/, '.0');
+        if (state.isPaused) {
+          statusDot.classList.remove('cycle-indicator', 'bg-[#dfff00]', 'shadow-[0_0_10px_#dfff00]');
+          statusDot.classList.add('bg-[#ffae00]', 'shadow-[0_0_10px_#ffae00]');
+          statusText.textContent = 'Paused • Drag (snaps near π/4), ←/→ to rotate, or Space to resume';
+          statusText.classList.add('text-amber-300');
+          statusText.classList.remove('text-slate-400');
+        } else {
+          statusDot.classList.add('cycle-indicator', 'bg-[#dfff00]', 'shadow-[0_0_10px_#dfff00]');
+          statusDot.classList.remove('bg-[#ffae00]', 'shadow-[0_0_10px_#ffae00]');
+          statusText.textContent = `Smooth ${periodFormatted}s cycle active • Click, drag, or use ←/→ & Space to control`;
+          statusText.classList.remove('text-amber-300');
+          statusText.classList.add('text-slate-400');
+        }
+      }
+
+      periodInput.addEventListener('input', () => {
+        const parsed = parseFloat(periodInput.value);
+        if (Number.isFinite(parsed) && parsed >= 0.05) {
+          state.rotationPeriodSec = Math.min(600, parsed);
+          if (!state.isPaused) {
+            updatePauseStatusUI();
+          }
+        }
+      });
+
+      periodInput.addEventListener('blur', () => {
+        const parsed = parseFloat(periodInput.value);
+        if (!Number.isFinite(parsed) || parsed < 0.05) {
+          state.rotationPeriodSec = DEFAULT_PERIOD_SEC;
+        }
+        periodInput.value = state.rotationPeriodSec.toString();
+        updatePauseStatusUI();
+      });
+
+      function setUnitMode(mode) {
+        if (state.unitMode === mode) return;
+        state.unitMode = mode;
+        if (mode === 'rad') {
+          btnRad.className = 'px-3 py-1 text-xs font-semibold transition-all bg-[#dfff00]/15 text-[#dfff00]';
+          btnDeg.className = 'px-3 py-1 text-xs font-semibold transition-all text-slate-400 hover:text-slate-200';
+        } else {
+          btnDeg.className = 'px-3 py-1 text-xs font-semibold transition-all bg-[#dfff00]/15 text-[#dfff00]';
+          btnRad.className = 'px-3 py-1 text-xs font-semibold transition-all text-slate-400 hover:text-slate-200';
+        }
+        updateNotableAnglesUnitLabels();
+        rebuildWaveStaticLayer();
+      }
+
+      btnRad.addEventListener('click', () => setUnitMode('rad'));
+      btnDeg.addEventListener('click', () => setUnitMode('deg'));
+
+      toggleExtensionsBtn.addEventListener('click', () => {
+        state.showGeoLines = !state.showGeoLines;
+        if (state.showGeoLines) {
+          toggleExtensionsBtn.classList.remove('opacity-50');
+          extDot.classList.add('bg-[#b84dff]', 'shadow-[0_0_6px_#b84dff]');
+          extDot.classList.remove('bg-slate-600');
+        } else {
+          toggleExtensionsBtn.classList.add('opacity-50');
+          extDot.classList.remove('bg-[#b84dff]', 'shadow-[0_0_6px_#b84dff]');
+          extDot.classList.add('bg-slate-600');
+        }
+      });
+
+      // ==========================================
+      // 9. POINTER SCRUBBING, MAGNETIC SNAP & KEYBOARD SHORTCUTS
+      // ==========================================
+      const QUARTER_PI = Math.PI / 4;
+      const SNAP_THRESHOLD = 0.055; // ~3.15 degrees magnetic snap radius around multiples of pi/4
+
+      function applyQuarterPiSnap(rawRad) {
+        const norm = normalizeAngle(rawRad);
+        const nearestQuarter = Math.round(norm / QUARTER_PI) * QUARTER_PI;
+        if (Math.abs(norm - nearestQuarter) < SNAP_THRESHOLD) {
+          return normalizeAngle(nearestQuarter);
+        }
+        return norm;
+      }
+
+      function scrubUnitFromEvent(e) {
+        const rect = unitCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const dx = x - unitMetrics.cx;
+        const dy = unitMetrics.cy - y; // Invert Y so upward is positive
+        const rawAngle = Math.atan2(dy, dx);
+        state.theta = applyQuarterPiSnap(rawAngle);
+      }
+
+      function scrubWaveFromEvent(e) {
+        const rect = waveCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const clampedX = Math.max(waveMetrics.padLeft, Math.min(waveMetrics.padLeft + waveMetrics.plotW, x));
+        const ratio = (clampedX - waveMetrics.padLeft) / waveMetrics.plotW;
+        state.theta = applyQuarterPiSnap(ratio * TWO_PI);
+      }
+
+      // Keyboard Left / Right arrow rotation & Space bar pause/resume shortcuts
+      window.addEventListener('keydown', (e) => {
+        const tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        if (e.code === 'Space' || e.key === ' ') {
+          // Avoid interfering if a button is focused and space activates it
+          if (tag === 'BUTTON') return;
+          e.preventDefault();
+          state.isPaused = !state.isPaused;
+          updatePauseStatusUI();
+          return;
+        }
+
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+        e.preventDefault();
+        state.isPaused = true;
+        updatePauseStatusUI();
+
+        // Step by 2° (or 10° when holding Shift); ArrowLeft rotates counter-clockwise (+θ), ArrowRight clockwise (-θ)
+        const stepRad = (e.shiftKey ? 10 : 2) * (Math.PI / 180);
+        const delta = e.key === 'ArrowLeft' ? stepRad : -stepRad;
+        state.theta = normalizeAngle(state.theta + delta);
+      });
+
+      // Unit Circle pointer interactions
+      unitCanvas.addEventListener('pointerenter', () => {
+        state.isPointerInsideUnit = true;
+      });
+
+      unitCanvas.addEventListener('pointerdown', (e) => {
+        state.isDraggingUnit = true;
+        state.isPaused = true;
+        updatePauseStatusUI();
+        unitCanvas.setPointerCapture(e.pointerId);
+        scrubUnitFromEvent(e);
+      });
+
+      unitCanvas.addEventListener('pointermove', (e) => {
+        if (!state.isDraggingUnit) return;
+        scrubUnitFromEvent(e);
+      });
+
+      unitCanvas.addEventListener('pointerup', (e) => {
+        if (state.isDraggingUnit) {
+          state.isDraggingUnit = false;
+          if (unitCanvas.hasPointerCapture(e.pointerId)) {
+            unitCanvas.releasePointerCapture(e.pointerId);
+          }
+        }
+      });
+
+      unitCanvas.addEventListener('pointerleave', () => {
+        state.isPointerInsideUnit = false;
+        if (!state.isDraggingUnit && !state.isDraggingWave && !state.isPointerInsideWave) {
+          state.isPaused = false;
+          updatePauseStatusUI();
+        }
+      });
+
+      // Sinusoidal Wave pointer interactions
+      waveCanvas.addEventListener('pointerenter', () => {
+        state.isPointerInsideWave = true;
+      });
+
+      waveCanvas.addEventListener('pointerdown', (e) => {
+        state.isDraggingWave = true;
+        state.isPaused = true;
+        updatePauseStatusUI();
+        waveCanvas.setPointerCapture(e.pointerId);
+        scrubWaveFromEvent(e);
+      });
+
+      waveCanvas.addEventListener('pointermove', (e) => {
+        if (!state.isDraggingWave) return;
+        scrubWaveFromEvent(e);
+      });
+
+      waveCanvas.addEventListener('pointerup', (e) => {
+        if (state.isDraggingWave) {
+          state.isDraggingWave = false;
+          if (waveCanvas.hasPointerCapture(e.pointerId)) {
+            waveCanvas.releasePointerCapture(e.pointerId);
+          }
+        }
+      });
+
+      waveCanvas.addEventListener('pointerleave', () => {
+        state.isPointerInsideWave = false;
+        if (!state.isDraggingUnit && !state.isDraggingWave && !state.isPointerInsideUnit) {
+          state.isPaused = false;
+          updatePauseStatusUI();
+        }
+      });
+
+      // ==========================================
+      // 10. RESPONSIVE CANVAS RESIZE HANDLING
+      // ==========================================
+      function resizeCanvases() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        // Unit Circle metrics
+        const uRect = unitWrapper.getBoundingClientRect();
+        const uw = Math.max(100, uRect.width);
+        const uh = Math.max(100, uRect.height);
+        unitCanvas.width = Math.round(uw * dpr);
+        unitCanvas.height = Math.round(uh * dpr);
+        unitMetrics.w = uw;
+        unitMetrics.h = uh;
+        unitMetrics.dpr = dpr;
+        unitMetrics.cx = uw * 0.5;
+        unitMetrics.cy = uh * 0.5 + 10;
+        unitMetrics.R = Math.max(60, Math.min(uw, uh - 46) * 0.36);
+
+        // Wave Chart metrics
+        const wRect = waveWrapper.getBoundingClientRect();
+        const ww = Math.max(100, wRect.width);
+        const wh = Math.max(100, wRect.height);
+        waveCanvas.width = Math.round(ww * dpr);
+        waveCanvas.height = Math.round(wh * dpr);
+        waveMetrics.w = ww;
+        waveMetrics.h = wh;
+        waveMetrics.dpr = dpr;
+        waveMetrics.padLeft = 44;
+        waveMetrics.padRight = 22;
+        waveMetrics.padTop = 24;
+        waveMetrics.padBottom = 26;
+        waveMetrics.plotW = Math.max(40, ww - waveMetrics.padLeft - waveMetrics.padRight);
+        waveMetrics.plotH = Math.max(40, wh - waveMetrics.padTop - waveMetrics.padBottom);
+        waveMetrics.midY = waveMetrics.padTop + waveMetrics.plotH * 0.5;
+        waveMetrics.ampY = waveMetrics.plotH * 0.42;
+
+        rebuildUnitStaticLayer();
+        rebuildWaveStaticLayer();
+      }
+
+      const resizeObserver = new ResizeObserver(() => resizeCanvases());
+      resizeObserver.observe(unitWrapper);
+      resizeObserver.observe(waveWrapper);
+
+      // ==========================================
+      // 11. DYNAMIC FRAME RENDERERS
+      // ==========================================
+      function drawUnitCircle(dt) {
+        const { w, h, dpr, cx, cy, R } = unitMetrics;
+        if (w <= 0 || h <= 0) return;
+
+        const ctx = unitCtx;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // 1. Blit pre-rendered static background, grid, axes, and base ring
+        ctx.drawImage(unitStaticLayer, 0, 0, w, h);
+
+        const theta = state.theta;
+        const cosA = Math.cos(theta);
+        const sinA = Math.sin(theta);
+        const tipX = cx + cosA * R;
+        const tipY = cy - sinA * R;
+
+        // 2. Illuminated Arc Sector & Perimeter Torch Cone around the ray angle
+        ctx.fillStyle = 'rgba(223, 255, 0, 0.08)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, R, 0, -theta, true);
+        ctx.closePath();
+        ctx.fill();
+
+        // Illuminated segment of the unit circle perimeter bathed by the ray light
+        const beamSpread = 0.34;
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.85)';
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, -theta - beamSpread, -theta + beamSpread);
+        ctx.stroke();
+
+        // Small angle arc near origin
+        const arcR = Math.min(26, R * 0.24);
+        ctx.strokeStyle = '#dfff00';
+        ctx.lineWidth = 1.75;
+        ctx.beginPath();
+        ctx.arc(cx, cy, arcR, 0, -theta, true);
+        ctx.stroke();
+
+        // 3. Optional Tangent/Secant (Amber) & Cotangent/Cosecant (Purple) Geometric Lines
+        if (state.showGeoLines) {
+          // Tangent & Secant on x = 1 (or x = -1)
+          if (Math.abs(cosA) > 0.14) {
+            const signX = cosA >= 0 ? 1 : -1;
+            const tanX = cx + signX * R;
+            const tanY = cy - (sinA / cosA) * signX * R;
+            if (Math.abs(tanY - cy) < h * 1.4) {
+              ctx.save();
+              ctx.setLineDash([4, 4]);
+              ctx.strokeStyle = 'rgba(255, 174, 0, 0.45)';
+              ctx.lineWidth = 1.2;
+              ctx.beginPath();
+              ctx.moveTo(tipX, tipY);
+              ctx.lineTo(tanX, tanY);
+              ctx.stroke();
+              ctx.restore();
+
+              // Tangent vertical segment
+              ctx.strokeStyle = '#ffae00';
+              ctx.lineWidth = 2.2;
+              ctx.beginPath();
+              ctx.moveTo(tanX, cy);
+              ctx.lineTo(tanX, tanY);
+              ctx.stroke();
+            }
+          }
+
+          // Cotangent & Cosecant on y = 1 (or y = -1)
+          if (Math.abs(sinA) > 0.14) {
+            const signY = sinA >= 0 ? 1 : -1;
+            const cotY = cy - signY * R;
+            const cotX = cx + (cosA / sinA) * signY * R;
+            if (Math.abs(cotX - cx) < w * 1.4) {
+              ctx.save();
+              ctx.setLineDash([4, 4]);
+              ctx.strokeStyle = 'rgba(184, 77, 255, 0.45)';
+              ctx.lineWidth = 1.2;
+              ctx.beginPath();
+              ctx.moveTo(tipX, tipY);
+              ctx.lineTo(cotX, cotY);
+              ctx.stroke();
+              ctx.restore();
+
+              // Cotangent horizontal segment
+              ctx.strokeStyle = '#b84dff';
+              ctx.lineWidth = 2.2;
+              ctx.beginPath();
+              ctx.moveTo(cx, cotY);
+              ctx.lineTo(cotX, cotY);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // 4. Right Triangle Legs: cos(θ) (Neon Cyan) & sin(θ) (Neon Magenta)
+        // Filled subtle triangle interior
+        ctx.fillStyle = 'rgba(0, 243, 255, 0.05)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(tipX, cy);
+        ctx.lineTo(tipX, tipY);
+        ctx.closePath();
+        ctx.fill();
+
+        // cos(θ) horizontal leg
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.25)';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(tipX, cy);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#00f3ff';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(tipX, cy);
+        ctx.stroke();
+
+        // sin(θ) vertical leg
+        ctx.strokeStyle = 'rgba(255, 42, 133, 0.25)';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(tipX, cy);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ff2a85';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(tipX, cy);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        // Right-angle corner square when legs are sufficiently large
+        if (Math.abs(cosA) * R > 14 && Math.abs(sinA) * R > 14) {
+          const sq = 8;
+          const sx = cosA >= 0 ? -sq : sq;
+          const sy = sinA >= 0 ? -sq : sq;
+          ctx.strokeStyle = 'rgba(226, 232, 240, 0.55)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(tipX + sx, cy);
+          ctx.lineTo(tipX + sx, cy + sy);
+          ctx.lineTo(tipX, cy + sy);
+          ctx.stroke();
+        }
+
+        // 5. Spawn & Render Luminous Falling Particles from the Ray
+        state.spawnAccumulator += dt * 65; // ~65 embers/sec
+        while (state.spawnAccumulator >= 1) {
+          spawnRayParticle(cosA, sinA);
+          state.spawnAccumulator -= 1;
+        }
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < POOL_SIZE; i++) {
+          const p = particles[i];
+          if (!p.active) continue;
+          p.life += dt;
+          if (p.life >= p.maxLife) {
+            p.active = false;
+            continue;
+          }
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += 12 * dt; // Gentle gravity acceleration
+
+          const alpha = 1 - p.life / p.maxLife;
+          ctx.globalAlpha = alpha * 0.9;
+          const sprite = p.isWhite ? SPRITES.sparkWhite : SPRITES.sparkLime;
+          const half = p.size * 0.5;
+          ctx.drawImage(sprite, p.x - half, p.y - half, p.size, p.size);
+        }
+        ctx.restore();
+
+        // 6. Luminous Rotating Laser Ray (Multi-layer additive glow + white-hot core)
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+
+        // Outer lime aura
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.22)';
+        ctx.lineWidth = 11;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        // Mid neon lime core
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.72)';
+        ctx.lineWidth = 4.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        // White-hot laser center
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        // 7. Glowing Sprite Beacons on Key Vertices
+        ctx.drawImage(SPRITES.cyan, tipX - 12, cy - 12, 24, 24);
+        ctx.drawImage(SPRITES.lime, tipX - 18, tipY - 18, 36, 36);
+        ctx.restore();
+      }
+
+      function drawWaveChart(dt) {
+        const { w, h, dpr, padLeft, padTop, plotW, plotH, midY, ampY } = waveMetrics;
+        if (w <= 0 || h <= 0) return;
+
+        const ctx = waveCtx;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // 1. Blit pre-rendered static wave curves, grid, axes, and intersection markers
+        ctx.drawImage(waveStaticLayer, 0, 0, w, h);
+
+        const theta = state.theta;
+        const ratio = theta / TWO_PI;
+        const curX = padLeft + ratio * plotW;
+        const cosY = midY - Math.cos(theta) * ampY;
+        const sinY = midY - Math.sin(theta) * ampY;
+
+        // 2. Shaded swept progress region from 0 to current θ
+        ctx.fillStyle = 'rgba(223, 255, 0, 0.045)';
+        ctx.fillRect(padLeft, padTop, curX - padLeft, plotH);
+
+        // 3. Spawn & Render Luminous Falling Particles from the Vertical Scrubber Bar
+        state.waveSpawnAccumulator += dt * 55;
+        while (state.waveSpawnAccumulator >= 1) {
+          spawnWaveParticle(curX);
+          state.waveSpawnAccumulator -= 1;
+        }
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < WAVE_POOL_SIZE; i++) {
+          const p = waveParticles[i];
+          if (!p.active) continue;
+          p.life += dt;
+          if (p.life >= p.maxLife) {
+            p.active = false;
+            continue;
+          }
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += 12 * dt; // Gentle gravity acceleration
+
+          const alpha = 1 - p.life / p.maxLife;
+          ctx.globalAlpha = alpha * 0.9;
+          const sprite = p.isWhite ? SPRITES.sparkWhite : SPRITES.sparkLime;
+          const half = p.size * 0.5;
+          ctx.drawImage(sprite, p.x - half, p.y - half, p.size, p.size);
+        }
+        ctx.restore();
+
+        // 4. Synchronized Luminous Vertical Scrubber Bar (matching the ray glow)
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.22)';
+        ctx.lineWidth = 9;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(curX, padTop - 4);
+        ctx.lineTo(curX, padTop + plotH + 4);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(223, 255, 0, 0.65)';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(curX, padTop - 4);
+        ctx.lineTo(curX, padTop + plotH + 4);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(curX, padTop - 4);
+        ctx.lineTo(curX, padTop + plotH + 4);
+        ctx.stroke();
+        ctx.restore();
+
+        // Top scrubber handle pill
+        ctx.fillStyle = '#dfff00';
+        ctx.beginPath();
+        ctx.roundRect(curX - 5, padTop - 8, 10, 8, 2);
+        ctx.fill();
+
+        // Dashed vertical connector between sin(θ) and cos(θ) on the wave
+        if (Math.abs(cosY - sinY) > 6) {
+          ctx.save();
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = 'rgba(226, 232, 240, 0.45)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(curX, cosY);
+          ctx.lineTo(curX, sinY);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Glowing Cos & Sin Sprite Beacons on the Curves
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.drawImage(SPRITES.cyan, curX - 13, cosY - 13, 26, 26);
+        ctx.drawImage(SPRITES.magenta, curX - 13, sinY - 13, 26, 26);
+        ctx.restore();
+      }
+
+      // ==========================================
+      // 12. MAIN REQUESTANIMATIONFRAME LOOP
+      // ==========================================
+      function loop(now) {
+        if (!state.lastTimestamp) state.lastTimestamp = now;
+        const dt = Math.min(0.05, Math.max(0.001, (now - state.lastTimestamp) / 1000));
+        state.lastTimestamp = now;
+
+        // Smooth, uniform constant rotation: 1 full 2π revolution every state.rotationPeriodSec seconds
+        if (!state.isPaused && state.rotationPeriodSec > 0) {
+          const angularVelocity = TWO_PI / state.rotationPeriodSec;
+          state.theta = normalizeAngle(state.theta + angularVelocity * dt);
+        }
+
+        drawUnitCircle(dt);
+        drawWaveChart(dt);
+        updateReadoutsAndTables();
+
+        requestAnimationFrame(loop);
+      }
+
+      // ==========================================
+      // 13. BOOTSTRAP APPLICATION
+      // ==========================================
+      window.addEventListener('load', () => {
+        buildExtendedTableDOM();
+        buildNotableAnglesDOM();
+        resizeCanvases();
+        updateReadoutsAndTables();
+        requestAnimationFrame(loop);
+      });
+    })();
+  </script>
+</body>
+</html>
