@@ -105,7 +105,7 @@
         </h1>
       </div>
       <p id="statusText" class="text-xs text-slate-400 mt-0.5">
-        Smooth 4.0s cycle active &bull; Click, drag, or use &larr;/&rarr; &amp; Space to control
+        Smooth 4.0s cycle active &bull; Click, drag, or use &larr;/&rarr; to rotate &bull; &uarr;/&darr; speed &bull; Space pause
       </p>
     </div>
 
@@ -113,16 +113,16 @@
     <div class="flex items-center gap-2 flex-wrap">
       <label
         for="periodInput"
-        title="Full rotation period in decimal seconds"
+        title="Full rotation period in seconds; use up/down arrows to speed up/slow down"
         class="bg-[#06080f] border border-slate-800 px-2 py-1 text-xs flex items-center gap-1.5 text-slate-400 focus-within:border-[#dfff00]/60 transition-colors"
       >
         <span>Cycle</span>
         <input
           id="periodInput"
           type="number"
-          min="0.1"
-          max="300"
-          step="0.1"
+          min="0.05"
+          max="600"
+          step="any"
           value="4.0"
           aria-label="Rotation period in seconds"
           class="w-12 bg-transparent font-mono-tech text-right text-[#dfff00] font-semibold focus:outline-none"
@@ -279,6 +279,9 @@
 
       const TWO_PI = Math.PI * 2;
       const DEFAULT_PERIOD_SEC = 4.0;
+      const MIN_PERIOD_SEC = 0.05;
+      const MAX_PERIOD_SEC = 600;
+      const PERIOD_STEP_SEC = 0.1;
       const EPSILON = 1e-7;
       const BG_COLOR = '#06080f';
 
@@ -290,8 +293,6 @@
         unitMode: 'rad',             // 'rad' | 'deg'
         rotationPeriodSec: DEFAULT_PERIOD_SEC,
         isPaused: false,
-        isPointerInsideUnit: false,
-        isPointerInsideWave: false,
         isDraggingUnit: false,
         isDraggingWave: false,
         showGeoLines: true,
@@ -851,8 +852,6 @@
 
           tr.addEventListener('click', () => {
             state.theta = normalizeAngle(item.rad);
-            state.isPaused = true;
-            updatePauseStatusUI();
           });
 
           frag.appendChild(tr);
@@ -947,17 +946,19 @@
       // 8. UI CONTROLS & PAUSE STATUS
       // ==========================================
       function updatePauseStatusUI() {
-        const periodFormatted = state.rotationPeriodSec.toFixed(1).replace(/\.0$/, '.0');
+        const periodFormatted = Number.isInteger(state.rotationPeriodSec)
+          ? state.rotationPeriodSec.toFixed(1)
+          : state.rotationPeriodSec.toString();
         if (state.isPaused) {
           statusDot.classList.remove('cycle-indicator', 'bg-[#dfff00]', 'shadow-[0_0_10px_#dfff00]');
           statusDot.classList.add('bg-[#ffae00]', 'shadow-[0_0_10px_#ffae00]');
-          statusText.textContent = 'Paused • Drag (snaps near π/4), ←/→ to rotate, or Space to resume';
+          statusText.textContent = 'Paused • Click, drag, or ←/→ to rotate • ↑/↓ speed • Space to resume';
           statusText.classList.add('text-amber-300');
           statusText.classList.remove('text-slate-400');
         } else {
           statusDot.classList.add('cycle-indicator', 'bg-[#dfff00]', 'shadow-[0_0_10px_#dfff00]');
           statusDot.classList.remove('bg-[#ffae00]', 'shadow-[0_0_10px_#ffae00]');
-          statusText.textContent = `Smooth ${periodFormatted}s cycle active • Click, drag, or use ←/→ & Space to control`;
+          statusText.textContent = `Smooth ${periodFormatted}s cycle active • Click, drag, or ←/→ to rotate • ↑/↓ speed • Space to pause`;
           statusText.classList.remove('text-amber-300');
           statusText.classList.add('text-slate-400');
         }
@@ -965,8 +966,8 @@
 
       periodInput.addEventListener('input', () => {
         const parsed = parseFloat(periodInput.value);
-        if (Number.isFinite(parsed) && parsed >= 0.05) {
-          state.rotationPeriodSec = Math.min(600, parsed);
+        if (Number.isFinite(parsed) && parsed >= MIN_PERIOD_SEC) {
+          state.rotationPeriodSec = Math.min(MAX_PERIOD_SEC, parsed);
           if (!state.isPaused) {
             updatePauseStatusUI();
           }
@@ -975,7 +976,7 @@
 
       periodInput.addEventListener('blur', () => {
         const parsed = parseFloat(periodInput.value);
-        if (!Number.isFinite(parsed) || parsed < 0.05) {
+        if (!Number.isFinite(parsed) || parsed < MIN_PERIOD_SEC) {
           state.rotationPeriodSec = DEFAULT_PERIOD_SEC;
         }
         periodInput.value = state.rotationPeriodSec.toString();
@@ -1045,15 +1046,28 @@
         state.theta = applyQuarterPiSnap(ratio * TWO_PI);
       }
 
-      // Keyboard Left / Right arrow rotation & Space bar pause/resume shortcuts
+      // Keyboard rotation, speed, and pause/resume shortcuts
       window.addEventListener('keydown', (e) => {
         const tag = document.activeElement && document.activeElement.tagName;
+
+        if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
+            (document.activeElement === periodInput || (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT'))) {
+          e.preventDefault();
+          const delta = e.key === 'ArrowUp' ? -PERIOD_STEP_SEC : PERIOD_STEP_SEC;
+          state.rotationPeriodSec = Math.max(MIN_PERIOD_SEC, Math.min(MAX_PERIOD_SEC,
+            Math.round((state.rotationPeriodSec + delta) * 1e10) / 1e10));
+          periodInput.value = state.rotationPeriodSec.toString();
+          updatePauseStatusUI();
+          return;
+        }
+
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
         if (e.code === 'Space' || e.key === ' ') {
           // Avoid interfering if a button is focused and space activates it
           if (tag === 'BUTTON') return;
           e.preventDefault();
+          if (e.repeat) return;
           state.isPaused = !state.isPaused;
           updatePauseStatusUI();
           return;
@@ -1062,8 +1076,6 @@
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
 
         e.preventDefault();
-        state.isPaused = true;
-        updatePauseStatusUI();
 
         // Step by 2° (or 10° when holding Shift); ArrowLeft rotates counter-clockwise (+θ), ArrowRight clockwise (-θ)
         const stepRad = (e.shiftKey ? 10 : 2) * (Math.PI / 180);
@@ -1072,14 +1084,8 @@
       });
 
       // Unit Circle pointer interactions
-      unitCanvas.addEventListener('pointerenter', () => {
-        state.isPointerInsideUnit = true;
-      });
-
       unitCanvas.addEventListener('pointerdown', (e) => {
         state.isDraggingUnit = true;
-        state.isPaused = true;
-        updatePauseStatusUI();
         unitCanvas.setPointerCapture(e.pointerId);
         scrubUnitFromEvent(e);
       });
@@ -1098,23 +1104,9 @@
         }
       });
 
-      unitCanvas.addEventListener('pointerleave', () => {
-        state.isPointerInsideUnit = false;
-        if (!state.isDraggingUnit && !state.isDraggingWave && !state.isPointerInsideWave) {
-          state.isPaused = false;
-          updatePauseStatusUI();
-        }
-      });
-
       // Sinusoidal Wave pointer interactions
-      waveCanvas.addEventListener('pointerenter', () => {
-        state.isPointerInsideWave = true;
-      });
-
       waveCanvas.addEventListener('pointerdown', (e) => {
         state.isDraggingWave = true;
-        state.isPaused = true;
-        updatePauseStatusUI();
         waveCanvas.setPointerCapture(e.pointerId);
         scrubWaveFromEvent(e);
       });
@@ -1130,14 +1122,6 @@
           if (waveCanvas.hasPointerCapture(e.pointerId)) {
             waveCanvas.releasePointerCapture(e.pointerId);
           }
-        }
-      });
-
-      waveCanvas.addEventListener('pointerleave', () => {
-        state.isPointerInsideWave = false;
-        if (!state.isDraggingUnit && !state.isDraggingWave && !state.isPointerInsideUnit) {
-          state.isPaused = false;
-          updatePauseStatusUI();
         }
       });
 
